@@ -88,45 +88,6 @@ public class BlueprintAPIController {
         Set<Blueprint> all = blueprintServices.getAllBlueprints();
         return new ResponseEntity<>(all, HttpStatus.ACCEPTED);
     }
-
-    /**
-     * GET /blueprints/{author}
-     * Devuelve todos los planos de un autor.
-     */
-    @GetMapping("/{author}")
-    public ResponseEntity<?> getBlueprintsByAuthor(@PathVariable String author) {
-        try {
-            Set<Blueprint> bps = blueprintServices.getBlueprintsByAuthor(author);
-            return new ResponseEntity<>(bps, HttpStatus.ACCEPTED);
-        } catch (BlueprintNotFoundException ex) {
-            logger.log(Level.WARNING, "Autor no encontrado: " + author, ex);
-            return new ResponseEntity<>(
-                    "Autor no encontrado: " + author,
-                    HttpStatus.NOT_FOUND
-            );
-        }
-    }
-
-    /**
-     * GET /blueprints/{author}/{bpname}
-     * Devuelve un plano específico por autor y nombre.
-     */
-    @GetMapping("/{author}/{bpname}")
-    public ResponseEntity<?> getBlueprintByAuthorAndName(
-            @PathVariable("author") String author,
-            @PathVariable("bpname") String bpname) {
-        try {
-            Blueprint bp = blueprintServices.getBlueprint(author, bpname);
-            return new ResponseEntity<>(bp, HttpStatus.ACCEPTED);
-        } catch (BlueprintNotFoundException ex) {
-            logger.log(Level.WARNING,
-                    "Plano no encontrado: " + author + "/" + bpname, ex);
-            return new ResponseEntity<>(
-                    "Plano no encontrado: " + author + "/" + bpname,
-                    HttpStatus.NOT_FOUND
-            );
-        }
-    }
 }
 ```
 
