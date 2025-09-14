@@ -56,19 +56,16 @@ public class BlueprintAPIController {
      * Devuelve un plano específico por autor y nombre.
      */
     @GetMapping("/{author}/{bpname}")
-    public ResponseEntity<?> getBlueprintByAuthorAndName(
-            @PathVariable("author") String author,
-            @PathVariable("bpname") String bpname) {
+    public ResponseEntity<Blueprint> getBlueprintByAuthorAndName(
+            @PathVariable String author,
+            @PathVariable String bpname) {
         try {
             Blueprint bp = blueprintServices.getBlueprint(author, bpname);
             return new ResponseEntity<>(bp, HttpStatus.ACCEPTED);
         } catch (BlueprintNotFoundException ex) {
             logger.log(Level.WARNING,
                     "Plano no encontrado: " + author + "/" + bpname, ex);
-            return new ResponseEntity<>(
-                    "Plano no encontrado: " + author + "/" + bpname,
-                    HttpStatus.NOT_FOUND
-            );
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
     }
 }

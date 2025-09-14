@@ -138,13 +138,60 @@ public class BlueprintAPIController {
 	$ mvn spring-boot:run
 	
 	```
-	Y luego enviando una petición GET a: http://localhost:8080/blueprints. Rectifique que, como respuesta, se obtenga un objeto jSON con una lista que contenga el detalle de los planos suministados por defecto, y que se haya aplicado el filtrado de puntos correspondiente.
 
+   ```bash
+   mvn clean compile spring-boot:run
+   curl -i http://localhost:8080/blueprints/Andres
+
+   ```
+   
+   Y luego enviando una petición GET a: http://localhost:8080/blueprints. Rectifique que, como respuesta, se obtenga un objeto jSON con una lista que contenga el detalle de los planos suministados por defecto, y que se haya aplicado el filtrado de puntos correspondiente.
+
+   ![Captura de pantalla 2025-09-14 110002.png](img/Captura%20de%20pantalla%202025-09-14%20110002.png)
 
 5. Modifique el controlador para que ahora, acepte peticiones GET al recurso /blueprints/{author}, el cual retorne usando una representación jSON todos los planos realizados por el autor cuyo nombre sea {author}. Si no existe dicho autor, se debe responder con el código de error HTTP 404. Para esto, revise en [la documentación de Spring](http://docs.spring.io/spring/docs/current/spring-framework-reference/html/mvc.html), sección 22.3.2, el uso de @PathVariable. De nuevo, verifique que al hacer una petición GET -por ejemplo- a recurso http://localhost:8080/blueprints/juan, se obtenga en formato jSON el conjunto de planos asociados al autor 'juan' (ajuste esto a los nombres de autor usados en el punto 2).
 
+   ```java
+   /**
+     * GET /blueprints/{author}
+     * Devuelve todos los planos de un autor.
+     */
+    @GetMapping("/{author}")
+    public ResponseEntity<?> getBlueprintsByAuthor(@PathVariable String author) {
+        try {
+            Set<Blueprint> bps = blueprintServices.getBlueprintsByAuthor(author);
+            return new ResponseEntity<>(bps, HttpStatus.ACCEPTED);
+        } catch (BlueprintNotFoundException ex) {
+            logger.log(Level.WARNING, "Autor no encontrado: " + author, ex);
+            return new ResponseEntity<>(
+                    "Autor no encontrado: " + author,
+                    HttpStatus.NOT_FOUND
+            );
+        }
+    }
+   ```
+
 6. Modifique el controlador para que ahora, acepte peticiones GET al recurso /blueprints/{author}/{bpname}, el cual retorne usando una representación jSON sólo UN plano, en este caso el realizado por {author} y cuyo nombre sea {bpname}. De nuevo, si no existe dicho autor, se debe responder con el código de error HTTP 404. 
 
+   ```java
+   /**
+     * GET /blueprints/{author}/{bpname}
+     * Devuelve un plano específico por autor y nombre.
+     */
+    @GetMapping("/{author}/{bpname}")
+    public ResponseEntity<Blueprint> getBlueprintByAuthorAndName(
+            @PathVariable String author,
+            @PathVariable String bpname) {
+        try {
+            Blueprint bp = blueprintServices.getBlueprint(author, bpname);
+            return new ResponseEntity<>(bp, HttpStatus.ACCEPTED);
+        } catch (BlueprintNotFoundException ex) {
+            logger.log(Level.WARNING,
+                    "Plano no encontrado: " + author + "/" + bpname, ex);
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
+   ```
 
 
 ### Parte II
