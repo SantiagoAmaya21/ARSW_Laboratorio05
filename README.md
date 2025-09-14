@@ -26,6 +26,23 @@ Del anterior diagrama de componentes (de alto nivel), se desprendió el siguient
 
 2. Modifique el bean de persistecia 'InMemoryBlueprintPersistence' para que por defecto se inicialice con al menos otros tres planos, y con dos asociados a un mismo autor.
 
+```java
+public InMemoryBlueprintPersistence() {
+
+        Point[] pts1 = new Point[]{new Point(140, 140), new Point(115, 115)};
+        Blueprint bp1 = new Blueprint("Andres", "plano1", pts1);
+        blueprints.put(new Tuple<>(bp1.getAuthor(), bp1.getName()), bp1);
+
+        Point[] pts2 = new Point[]{new Point(50, 50), new Point(60, 60)};
+        Blueprint bp2 = new Blueprint("Andres", "plano2", pts2);
+        blueprints.put(new Tuple<>(bp2.getAuthor(), bp2.getName()), bp2);
+
+        Point[] pts3 = new Point[]{new Point(200, 200), new Point(220, 220)};
+        Blueprint bp3 = new Blueprint("Maria", "plano3", pts3);
+        blueprints.put(new Tuple<>(bp3.getAuthor(), bp3.getName()), bp3);
+    }
+```
+
 3. Configure su aplicación para que ofrezca el recurso "/blueprints", de manera que cuando se le haga una petición GET, retorne -en formato jSON- el conjunto de todos los planos. Para esto:
 
 	* Modifique la clase BlueprintAPIController teniendo en cuenta el siguiente ejemplo de controlador REST hecho con SpringMVC/SpringBoot:
@@ -50,9 +67,73 @@ Del anterior diagrama de componentes (de alto nivel), se desprendió el siguient
 	```
 	* Haga que en esta misma clase se inyecte el bean de tipo BlueprintServices (al cual, a su vez, se le inyectarán sus dependencias de persisntecia y de filtrado de puntos).
 
+#### Solucion:
+
+```java
+@RestController
+@RequestMapping("/blueprints")
+public class BlueprintAPIController {
+
+    private static final Logger logger = Logger.getLogger(BlueprintAPIController.class.getName());
+
+    @Autowired
+    private BlueprintsServices blueprintServices;
+
+    /**
+     * GET /blueprints
+     * Devuelve todos los planos.
+     */
+    @GetMapping
+    public ResponseEntity<Set<Blueprint>> getAllBlueprints() {
+        Set<Blueprint> all = blueprintServices.getAllBlueprints();
+        return new ResponseEntity<>(all, HttpStatus.ACCEPTED);
+    }
+
+    /**
+     * GET /blueprints/{author}
+     * Devuelve todos los planos de un autor.
+     */
+    @GetMapping("/{author}")
+    public ResponseEntity<?> getBlueprintsByAuthor(@PathVariable String author) {
+        try {
+            Set<Blueprint> bps = blueprintServices.getBlueprintsByAuthor(author);
+            return new ResponseEntity<>(bps, HttpStatus.ACCEPTED);
+        } catch (BlueprintNotFoundException ex) {
+            logger.log(Level.WARNING, "Autor no encontrado: " + author, ex);
+            return new ResponseEntity<>(
+                    "Autor no encontrado: " + author,
+                    HttpStatus.NOT_FOUND
+            );
+        }
+    }
+
+    /**
+     * GET /blueprints/{author}/{bpname}
+     * Devuelve un plano específico por autor y nombre.
+     */
+    @GetMapping("/{author}/{bpname}")
+    public ResponseEntity<?> getBlueprintByAuthorAndName(
+            @PathVariable("author") String author,
+            @PathVariable("bpname") String bpname) {
+        try {
+            Blueprint bp = blueprintServices.getBlueprint(author, bpname);
+            return new ResponseEntity<>(bp, HttpStatus.ACCEPTED);
+        } catch (BlueprintNotFoundException ex) {
+            logger.log(Level.WARNING,
+                    "Plano no encontrado: " + author + "/" + bpname, ex);
+            return new ResponseEntity<>(
+                    "Plano no encontrado: " + author + "/" + bpname,
+                    HttpStatus.NOT_FOUND
+            );
+        }
+    }
+}
+```
+
 4. Verifique el funcionamiento de a aplicación lanzando la aplicación con maven:
 
 	```bash
+	$ mvn clean
 	$ mvn compile
 	$ mvn spring-boot:run
 	
