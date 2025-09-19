@@ -2,7 +2,9 @@
 
 ### Arquitecturas de Software
 
-
+## Integrantes
+- Ricardo Andrés Ayala Garzón [lRicardol](https://github.com/lRicardol)
+- Santiago Amaya Zapata [SantiagoAmaya21](https://github.com/SantiagoAmaya21)
 
 #### API REST para la gestión de planos.
 
@@ -26,6 +28,23 @@ Del anterior diagrama de componentes (de alto nivel), se desprendió el siguient
 
 2. Modifique el bean de persistecia 'InMemoryBlueprintPersistence' para que por defecto se inicialice con al menos otros tres planos, y con dos asociados a un mismo autor.
 
+```java
+public InMemoryBlueprintPersistence() {
+
+        Point[] pts1 = new Point[]{new Point(140, 140), new Point(115, 115)};
+        Blueprint bp1 = new Blueprint("Andres", "plano1", pts1);
+        blueprints.put(new Tuple<>(bp1.getAuthor(), bp1.getName()), bp1);
+
+        Point[] pts2 = new Point[]{new Point(50, 50), new Point(60, 60)};
+        Blueprint bp2 = new Blueprint("Andres", "plano2", pts2);
+        blueprints.put(new Tuple<>(bp2.getAuthor(), bp2.getName()), bp2);
+
+        Point[] pts3 = new Point[]{new Point(200, 200), new Point(220, 220)};
+        Blueprint bp3 = new Blueprint("Maria", "plano3", pts3);
+        blueprints.put(new Tuple<>(bp3.getAuthor(), bp3.getName()), bp3);
+    }
+```
+
 3. Configure su aplicación para que ofrezca el recurso "/blueprints", de manera que cuando se le haga una petición GET, retorne -en formato jSON- el conjunto de todos los planos. Para esto:
 
 	* Modifique la clase BlueprintAPIController teniendo en cuenta el siguiente ejemplo de controlador REST hecho con SpringMVC/SpringBoot:
@@ -36,34 +55,106 @@ Del anterior diagrama de componentes (de alto nivel), se desprendió el siguient
 	public class XXController {
     
         
-    @RequestMapping(method = RequestMethod.GET)
-    public ResponseEntity<?> manejadorGetRecursoXX(){
-        try {
-            //obtener datos que se enviarán a través del API
-            return new ResponseEntity<>(data,HttpStatus.ACCEPTED);
-        } catch (XXException ex) {
-            Logger.getLogger(XXController.class.getName()).log(Level.SEVERE, null, ex);
-            return new ResponseEntity<>("Error bla bla bla",HttpStatus.NOT_FOUND);
-        }        
+		@RequestMapping(method = RequestMethod.GET)
+		public ResponseEntity<?> manejadorGetRecursoXX(){
+			try {
+				//obtener datos que se enviarán a través del API
+				return new ResponseEntity<>(data,HttpStatus.ACCEPTED);
+			} catch (XXException ex) {
+				Logger.getLogger(XXController.class.getName()).log(Level.SEVERE, null, ex);
+				return new ResponseEntity<>("Error bla bla bla",HttpStatus.NOT_FOUND);
+			}        
+		}
 	}
-
 	```
 	* Haga que en esta misma clase se inyecte el bean de tipo BlueprintServices (al cual, a su vez, se le inyectarán sus dependencias de persisntecia y de filtrado de puntos).
+
+#### Solucion:
+
+```java
+@RestController
+@RequestMapping("/blueprints")
+public class BlueprintAPIController {
+
+    private static final Logger logger = Logger.getLogger(BlueprintAPIController.class.getName());
+
+    @Autowired
+    private BlueprintsServices blueprintServices;
+
+    /**
+     * GET /blueprints
+     * Devuelve todos los planos.
+     */
+    @GetMapping
+    public ResponseEntity<Set<Blueprint>> getAllBlueprints() {
+        Set<Blueprint> all = blueprintServices.getAllBlueprints();
+        return new ResponseEntity<>(all, HttpStatus.ACCEPTED);
+    }
+}
+```
 
 4. Verifique el funcionamiento de a aplicación lanzando la aplicación con maven:
 
 	```bash
+	$ mvn clean
 	$ mvn compile
 	$ mvn spring-boot:run
 	
 	```
-	Y luego enviando una petición GET a: http://localhost:8080/blueprints. Rectifique que, como respuesta, se obtenga un objeto jSON con una lista que contenga el detalle de los planos suministados por defecto, y que se haya aplicado el filtrado de puntos correspondiente.
 
+   ```bash
+   mvn clean compile spring-boot:run
+   curl -i http://localhost:8080/blueprints/Andres
+
+   ```
+   
+   Y luego enviando una petición GET a: http://localhost:8080/blueprints. Rectifique que, como respuesta, se obtenga un objeto jSON con una lista que contenga el detalle de los planos suministados por defecto, y que se haya aplicado el filtrado de puntos correspondiente.
+
+   ![Captura de pantalla 2025-09-14 110002.png](img/Captura%20de%20pantalla%202025-09-14%20110002.png)
 
 5. Modifique el controlador para que ahora, acepte peticiones GET al recurso /blueprints/{author}, el cual retorne usando una representación jSON todos los planos realizados por el autor cuyo nombre sea {author}. Si no existe dicho autor, se debe responder con el código de error HTTP 404. Para esto, revise en [la documentación de Spring](http://docs.spring.io/spring/docs/current/spring-framework-reference/html/mvc.html), sección 22.3.2, el uso de @PathVariable. De nuevo, verifique que al hacer una petición GET -por ejemplo- a recurso http://localhost:8080/blueprints/juan, se obtenga en formato jSON el conjunto de planos asociados al autor 'juan' (ajuste esto a los nombres de autor usados en el punto 2).
 
+   ```java
+   /**
+     * GET /blueprints/{author}
+     * Devuelve todos los planos de un autor.
+     */
+    @GetMapping("/{author}")
+    public ResponseEntity<?> getBlueprintsByAuthor(@PathVariable String author) {
+        try {
+            Set<Blueprint> bps = blueprintServices.getBlueprintsByAuthor(author);
+            return new ResponseEntity<>(bps, HttpStatus.ACCEPTED);
+        } catch (BlueprintNotFoundException ex) {
+            logger.log(Level.WARNING, "Autor no encontrado: " + author, ex);
+            return new ResponseEntity<>(
+                    "Autor no encontrado: " + author,
+                    HttpStatus.NOT_FOUND
+            );
+        }
+    }
+   ```
+
 6. Modifique el controlador para que ahora, acepte peticiones GET al recurso /blueprints/{author}/{bpname}, el cual retorne usando una representación jSON sólo UN plano, en este caso el realizado por {author} y cuyo nombre sea {bpname}. De nuevo, si no existe dicho autor, se debe responder con el código de error HTTP 404. 
 
+   ```java
+   /**
+     * GET /blueprints/{author}/{bpname}
+     * Devuelve un plano específico por autor y nombre.
+     */
+    @GetMapping("/{author}/{bpname}")
+    public ResponseEntity<Blueprint> getBlueprintByAuthorAndName(
+            @PathVariable String author,
+            @PathVariable String bpname) {
+        try {
+            Blueprint bp = blueprintServices.getBlueprint(author, bpname);
+            return new ResponseEntity<>(bp, HttpStatus.ACCEPTED);
+        } catch (BlueprintNotFoundException ex) {
+            logger.log(Level.WARNING,
+                    "Plano no encontrado: " + author + "/" + bpname, ex);
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
+   ```
 
 
 ### Parte II
@@ -79,10 +170,9 @@ Del anterior diagrama de componentes (de alto nivel), se desprendió el siguient
         } catch (XXException ex) {
             Logger.getLogger(XXController.class.getName()).log(Level.SEVERE, null, ex);
             return new ResponseEntity<>("Error bla bla bla",HttpStatus.FORBIDDEN);            
-        }        
- 	
+        }
 	}
-	```	
+	```
 
 
 2.  Para probar que el recurso ‘planos’ acepta e interpreta
@@ -92,20 +182,52 @@ Del anterior diagrama de componentes (de alto nivel), se desprendió el siguient
     cual en este caso debe ser un documento jSON equivalente a la clase
     Cliente (donde en lugar de {ObjetoJSON}, se usará un objeto jSON correspondiente a una nueva orden:
 
-	```	
-	$ curl -i -X POST -HContent-Type:application/json -HAccept:application/json http://URL_del_recurso_ordenes -d '{ObjetoJSON}'
-	```	
 
-	Con lo anterior, registre un nuevo plano (para 'diseñar' un objeto jSON, puede usar [esta herramienta](http://www.jsoneditoronline.org/)):
+Primero debemos agregar el POST mapping en la clase BluePrintAPIController
+
+	```	java
+	 /**
+     * POST /blueprints
+     * Registra un nuevo plano.
+     */
+	@RequestMapping(method = RequestMethod.POST)	
+	public ResponseEntity<?> manejadorPostRecursoXX(@RequestBody TipoXX o){
+        try {
+            //registrar dato
+            return new ResponseEntity<>(HttpStatus.CREATED);
+        } catch (XXException ex) {
+            Logger.getLogger(XXController.class.getName()).log(Level.SEVERE, null, ex);
+            return new ResponseEntity<>("Error bla bla bla",HttpStatus.FORBIDDEN);            
+        }
+	}
+	```
 	
+Guardamos el siguiente JSON en el archivo data.json
 
-	Nota: puede basarse en el formato jSON mostrado en el navegador al consultar una orden con el método GET.
+	```	json
+		{
+			"author": "Santiago",
+			"name": "PlanoCasa",
+			"points": [
+			{"x": 10, "y": 20},
+			{"x": 15, "y": 25},
+			{"x": 30, "y": 40}
+			]
+		}
 
+	```	
 
-3. Teniendo en cuenta el autor y numbre del plano registrado, verifique que el mismo se pueda obtener mediante una petición GET al recurso '/blueprints/{author}/{bpname}' correspondiente.
+Ejecutamos el comando en la terminal de la siguiente manera, observamos que todo funcionó correctamente
+
+![Captura de pantalla 2025-09-18 183823.png](img/Captura%20de%20pantalla%202025-09-18%20183823.png)
+
+3. Teniendo en cuenta el autor y nombre del plano registrado, verifique que el mismo se pueda obtener mediante una petición GET al recurso '/blueprints/{author}/{bpname}' correspondiente.
+
+![Captura de pantalla 2025-09-18 185433.png](img/Captura%20de%20pantalla%202025-09-18%20185433.png)
 
 4. Agregue soporte al verbo PUT para los recursos de la forma '/blueprints/{author}/{bpname}', de manera que sea posible actualizar un plano determinado.
 
+![Captura de pantalla 2025-09-18 190301.png](img/Captura%20de%20pantalla%202025-09-18%20190301.png)
 
 ### Parte III
 

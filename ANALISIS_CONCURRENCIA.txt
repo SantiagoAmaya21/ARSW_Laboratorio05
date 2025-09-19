@@ -1,0 +1,28 @@
+PARTE 3
+Riesgo de concurrencia
+
+Clases con posibles condiciones de carrera
+
+InMemoryBluePrintPersistence
+
+Esta clase tiene un recurso compartido de tipo HashMap, este objeto no es thread-safe, por ende debemos cambiarlo, ya que si dos hilos hacen PUT al mismo tiempo se puede corromper la estructura interna del HasMap, de igual manera si un hilo hace GET, y en ese mismo instante otro hace PUT, puede generar resultados inconsistentes.
+
+Se encontraron las siguientes regiones críticas:
+saveBlueprint(...), updateBlueprint(...), getBlueprintsByAuthor(...) y getAllBluePrints(...)
+
+BlueprintsServices
+
+Dado que la persistencia no es thread-safe, todos los métodos del servicio heredan las condiciones de carrera
+
+Específicamente se encontraron las siguientes condiciones de carrera:
+1. Inserción concurrente de planos
+2. Lectura mientras se escribe
+3. Actualización concurrente
+
+Estrategia para solucionar el problema
+La opción de sincronizar todos los métodos no es la mejor solución porque puede bloquear la API cada vez que un hilo acceda y reducir el desempeño de la aplicación
+Por tanto, se hicieron las siguientes modificaciones:
+
+1. Cambiamos HashMap por ConcurrentHasMap, ya que este objeto permite accesos concurrentes sin corromper la estructura del mismo.
+2. El método en la clase de persistencia saveBluePrint(...) sigue siendo vulnerable, ya que tiene la forma check-then-act, usar el método .put() sobre el objeto puede generar condiciones de carrera, entonces, como cambiamos el objeto a ConcurrentHashMap, podemos aprovechar el método putIfAbsent, el cual ayuda a manejar este tipo de problemas.
+3. Los demás métodos mencionados arriba ya evitan condiciones de carrera con el cambio de tipo de objeto mencionado.
