@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  *
@@ -24,7 +25,7 @@ import java.util.Set;
 @Repository
 public class InMemoryBlueprintPersistence implements BlueprintsPersistence{
 
-    private final Map<Tuple<String,String>,Blueprint> blueprints=new HashMap<>();
+    private final Map<Tuple<String,String>,Blueprint> blueprints=new ConcurrentHashMap<>();
 
     public InMemoryBlueprintPersistence() {
 
@@ -43,12 +44,14 @@ public class InMemoryBlueprintPersistence implements BlueprintsPersistence{
     
     @Override
     public void saveBlueprint(Blueprint bp) throws BlueprintPersistenceException {
+
+
         if (blueprints.containsKey(new Tuple<>(bp.getAuthor(),bp.getName()))){
             throw new BlueprintPersistenceException("The given blueprint already exists: "+bp);
         }
         else{
-            blueprints.put(new Tuple<>(bp.getAuthor(),bp.getName()), bp);
-        }        
+            blueprints.putIfAbsent(new Tuple<>(bp.getAuthor(),bp.getName()), bp);
+        }
     }
 
     @Override
@@ -78,5 +81,17 @@ public class InMemoryBlueprintPersistence implements BlueprintsPersistence{
     public Set<Blueprint> getAllBlueprints() {
         return new HashSet<>(blueprints.values());
     }
-    
+
+    @Override
+    public void updateBlueprint(String author, String bprintname, Blueprint updatedBp) throws BlueprintNotFoundException {
+        Tuple<String, String> key = new Tuple<>(author, bprintname);
+        if (!blueprints.containsKey(key)) {
+            throw new BlueprintNotFoundException("Plano no encontrado: " + author + " - " + bprintname);
+        }
+
+
+        Blueprint newBp = new Blueprint(author, bprintname, updatedBp.getPoints().toArray(new Point[0]));
+        blueprints.put(key, newBp);
+    }
+
 }

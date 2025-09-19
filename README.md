@@ -2,7 +2,9 @@
 
 ### Arquitecturas de Software
 
-
+## Integrantes
+- Ricardo Andrés Ayala Garzón [lRicardol](https://github.com/lRicardol)
+- Santiago Amaya Zapata [SantiagoAmaya21](https://github.com/SantiagoAmaya21)
 
 #### API REST para la gestión de planos.
 
@@ -53,17 +55,17 @@ public InMemoryBlueprintPersistence() {
 	public class XXController {
     
         
-    @RequestMapping(method = RequestMethod.GET)
-    public ResponseEntity<?> manejadorGetRecursoXX(){
-        try {
-            //obtener datos que se enviarán a través del API
-            return new ResponseEntity<>(data,HttpStatus.ACCEPTED);
-        } catch (XXException ex) {
-            Logger.getLogger(XXController.class.getName()).log(Level.SEVERE, null, ex);
-            return new ResponseEntity<>("Error bla bla bla",HttpStatus.NOT_FOUND);
-        }        
+		@RequestMapping(method = RequestMethod.GET)
+		public ResponseEntity<?> manejadorGetRecursoXX(){
+			try {
+				//obtener datos que se enviarán a través del API
+				return new ResponseEntity<>(data,HttpStatus.ACCEPTED);
+			} catch (XXException ex) {
+				Logger.getLogger(XXController.class.getName()).log(Level.SEVERE, null, ex);
+				return new ResponseEntity<>("Error bla bla bla",HttpStatus.NOT_FOUND);
+			}        
+		}
 	}
-
 	```
 	* Haga que en esta misma clase se inyecte el bean de tipo BlueprintServices (al cual, a su vez, se le inyectarán sus dependencias de persisntecia y de filtrado de puntos).
 
@@ -168,10 +170,9 @@ public class BlueprintAPIController {
         } catch (XXException ex) {
             Logger.getLogger(XXController.class.getName()).log(Level.SEVERE, null, ex);
             return new ResponseEntity<>("Error bla bla bla",HttpStatus.FORBIDDEN);            
-        }        
- 	
+        }
 	}
-	```	
+	```
 
 
 2.  Para probar que el recurso ‘planos’ acepta e interpreta
@@ -181,20 +182,52 @@ public class BlueprintAPIController {
     cual en este caso debe ser un documento jSON equivalente a la clase
     Cliente (donde en lugar de {ObjetoJSON}, se usará un objeto jSON correspondiente a una nueva orden:
 
-	```	
-	$ curl -i -X POST -HContent-Type:application/json -HAccept:application/json http://URL_del_recurso_ordenes -d '{ObjetoJSON}'
-	```	
 
-	Con lo anterior, registre un nuevo plano (para 'diseñar' un objeto jSON, puede usar [esta herramienta](http://www.jsoneditoronline.org/)):
+Primero debemos agregar el POST mapping en la clase BluePrintAPIController
+
+	```	java
+	 /**
+     * POST /blueprints
+     * Registra un nuevo plano.
+     */
+	@RequestMapping(method = RequestMethod.POST)	
+	public ResponseEntity<?> manejadorPostRecursoXX(@RequestBody TipoXX o){
+        try {
+            //registrar dato
+            return new ResponseEntity<>(HttpStatus.CREATED);
+        } catch (XXException ex) {
+            Logger.getLogger(XXController.class.getName()).log(Level.SEVERE, null, ex);
+            return new ResponseEntity<>("Error bla bla bla",HttpStatus.FORBIDDEN);            
+        }
+	}
+	```
 	
+Guardamos el siguiente JSON en el archivo data.json
 
-	Nota: puede basarse en el formato jSON mostrado en el navegador al consultar una orden con el método GET.
+	```	json
+		{
+			"author": "Santiago",
+			"name": "PlanoCasa",
+			"points": [
+			{"x": 10, "y": 20},
+			{"x": 15, "y": 25},
+			{"x": 30, "y": 40}
+			]
+		}
 
+	```	
 
-3. Teniendo en cuenta el autor y numbre del plano registrado, verifique que el mismo se pueda obtener mediante una petición GET al recurso '/blueprints/{author}/{bpname}' correspondiente.
+Ejecutamos el comando en la terminal de la siguiente manera, observamos que todo funcionó correctamente
+
+![Captura de pantalla 2025-09-18 183823.png](img/Captura%20de%20pantalla%202025-09-18%20183823.png)
+
+3. Teniendo en cuenta el autor y nombre del plano registrado, verifique que el mismo se pueda obtener mediante una petición GET al recurso '/blueprints/{author}/{bpname}' correspondiente.
+
+![Captura de pantalla 2025-09-18 185433.png](img/Captura%20de%20pantalla%202025-09-18%20185433.png)
 
 4. Agregue soporte al verbo PUT para los recursos de la forma '/blueprints/{author}/{bpname}', de manera que sea posible actualizar un plano determinado.
 
+![Captura de pantalla 2025-09-18 190301.png](img/Captura%20de%20pantalla%202025-09-18%20190301.png)
 
 ### Parte III
 
